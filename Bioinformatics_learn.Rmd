@@ -38,7 +38,7 @@ Inputs {.sidebar}
 * 引言：生信图谱
 * 第一章：R语言
 * 第二章：Linux基础
-* 第三章：生信常用软件及数据格式
+* 第三章：生信常用软件及格式
 * 第四章：Github介绍
 * 第五章：生信流程介绍
 
@@ -408,7 +408,6 @@ wc -l /Users/liang/Desktop/github/Bioinformatics_learn/data/fpkm.csv
 
 ```{bash, eval = T, echo = T} 
 # 将OBP替换为obp
-path=
 less /Users/liang/Desktop/github/Bioinformatics_learn/data/fpkm.csv | grep 'OBP'| \
   sed 's/OBP/obp/'| head 
 
@@ -420,15 +419,145 @@ less /Users/liang/Desktop/github/Bioinformatics_learn/data/fpkm.csv | grep 'OBP'
 # 5. head 只显示前十行；对应的tail只显示末尾10行
 
 ```
-
+<br>
 
 #### 2.2 awk
+```{bash, eval = T, echo = T} 
+# 在行前加数字 
+less /Users/liang/Desktop/github/Bioinformatics_learn/data/fpkm.csv | \
+  awk -F '\,' 'BEGIN{n=1}{print n"\t"$1"\t"$2"\t"$(NF-1)"\t"$NF; n++}'  | \
+  head 
+
+# 注意此处用到的语句：
+# 1. -F ',' 指以逗号分割
+# 2. $1为第一列，$NF为最后一列， $(NF-1)为倒数第二列
+# 3. head 只打印出前10行，避免打印内容太多造成刷屏
+```
+<br>
+
+```{bash, eval = T, echo = T} 
+# 累加求和
+# 以求OBP LM FPKM加和为例 
+less /Users/liang/Desktop/github/Bioinformatics_learn/data/fpkm.csv | \
+  grep 'OBP' | \
+  awk -F ',' '{sum=sum+$3}END{print "OBP_LM FPKM\t"sum}' 
+```
+<br>
+
+```{bash, eval = T, echo = T} 
+# fastq2fasta
+less /Users/liang/Desktop/github/Bioinformatics_learn/data/test.fastq | \
+  awk '{if(NR%4 == 1){print ">" substr($0, 2)}}{if(NR%4 == 2){print}}' | \
+  head -4
+```
+<br>
 
 #### 2.3 vim
+vim是linux编辑器，需要自行上网查询，使用频率非常高，掌握后对于编辑文件非常方便；
 
-### 3. shell脚本
+另 微软VScode 可实现remote-ssh登陆服务器，可实现服务端文件编辑，非常方便，极力推荐！！！
 
-#### 3.1
+<br>
+
+#### 2.4 shell/bash
+
+以上运行linux命令均可写为shell bash脚本，直接运行bash *.sh即可，方便运行，还可整合为流程脚本，非常方便！！！
+
+```{bash, eval = T, echo = T} 
+# 仍以fastq2fasta为例，将linux命令写入bash脚本 
+less /Users/liang/Desktop/github/Bioinformatics_learn/data/fastq2fasta.sh
+```
+<br>
+
+```{bash, eval = T, echo = T} 
+# 仍以fastq2fasta为例, 运行脚本 
+bash /Users/liang/Desktop/github/Bioinformatics_learn/data/fastq2fasta.sh | head -4
+```
+<br>
+
+实现脚本传参
+```{bash, eval = T, echo = T} 
+# 整理流程需要传参
+# 将fastq文件作为参数传输
+
+bash /Users/liang/Desktop/github/Bioinformatics_learn/data/fastq2fasta_argv.sh \
+  /Users/liang/Desktop/github/Bioinformatics_learn/data/test.fastq | \
+  head -4  
+```
+<br>
+
+
+第三章
+===================================
+
+Inputs {.sidebar}
+-------------------------------------
+<br>
+
+**第三章 生信常用软件及格式**
+
+* 了解常用生信软件
+* 了解常用数据格式
+* NCBI资源利用
+
+<br>
+
+Column {.tabset} 
+-------------------------------------
+
+### 生信常用软件
+```{r eval=TRUE, echo=FALSE, results='markup', include=TRUE, cache=FALSE, message=FALSE, warning=FALSE, error=TRUE, fig.cap=NULL, out.width='100%'}
+text <- "
+类别  | 软件  | 软件说明 | 备注
+质控  | fastqc| 下机数据质控 | [github](https://github.com/s-andrews/FastQC) / [官网](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) / [软件安装及使用](https://www.cnblogs.com/lmt921108/p/6900416.html)
+质控  | Trimmomatic| 下机数据质控| [github](https://github.com/timflutre/trimmomatic) / [软件安装及使用](http://www.usadellab.org/cms/index.php?page=trimmomatic) / [paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4103590/)
+质控  | SolexaQA| 下机数据质控 | [软件安装及使用](http://blog.sina.com.cn/s/blog_7f1542270101gccz.html) / [官网](http://solexaqa.sourceforge.net/) [paper](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-485)
+SRA解压 | fastq-dump | 解压NCBI SRA格式为fastq格式| [软件安装及使用](https://blog.csdn.net/j_fun/article/details/60745262)
+比对  | blast |  NCBI 比对软件 | [软件安装及使用](https://blog.csdn.net/flyfrommath/article/details/52945586)  / [算法](https://blog.csdn.net/huangliangbo0805/article/details/40868269)   
+比对  | bwa   | 短序列比对软件 | [软件安装及使用](https://www.cnblogs.com/emanlee/p/4316573.html) / [算法](https://www.cnblogs.com/leezx/p/6226717.html)
+比对  | bowtie2 | 短序列比对软件| [软件安装及使用](http://blog.sciencenet.cn/blog-830496-750216.html) / [算法](http://blog.sina.com.cn/s/blog_751bd9440102v2yj.html)
+比对  | kallisto | 基于kmer比对软件, 速度极快 | [软件安装及使用](http://blog.sina.com.cn/s/blog_1704ff73a0102wzkl.html) / [paper](https://www.nature.com/articles/nbt.3519)
+比对  | STAR | RNA-seq序列比对工具| [软件安装及使用](https://www.jianshu.com/p/fa388b21d1de) / [github](https://github.com/alexdobin/STAR)
+sam处理  | samtools | 操作sam和bam文件的工具合集 | [软件安装及使用](https://www.jianshu.com/p/6b7a442d293f) / [github](https://github.com/samtools/samtools) 
+组装  | SOAPdenovo| 华大出品组装软件 | [软件使用](https://www.cnblogs.com/Formulate0303/p/6879841.html)
+组装  | SPAdes |基因组组装软件 |  [软件安装及使用](https://www.plob.org/article/7861.html)
+组装  | IDBA | 基因组组装软件 |[软件安装及使用](http://118.31.76.100:100/ngs/bin/idba-ud/)
+转录组组装 | Trinity   | 转录组无参组装 | [软件安装及使用](https://www.jianshu.com/p/8518a23255f8)
+有参转录组 | TopHat    | 有参转录组比对软件 | [软件安装及使用](https://blog.csdn.net/g863402758/article/details/78454818)
+有参转录组 | Cufflinks | 用于基因表达量的计算和差异表达基因的寻找 | [软件安装及使用](https://blog.csdn.net/g863402758/article/details/52965752)
+聚类  | | |
+构树  | | |
+"
+
+df <- read.delim(text = text, stringsAsFactors = FALSE,
+                 header = TRUE, sep = "|",
+                 check.names = FALSE)
+knitr::kable(df, booktabs = TRUE, longtable = FALSE, escape = TRUE, align = 'c', linesep = '\\addlinespace', booktabs = TRUE) %>%
+    kable_styling(full_width = T, latex_options = c("hold_position")) %>% add_header_above(c("常用生信软件集合" = 4), bold = T)
+
+```
+
+### 生信常用数据格式
+```{r eval=TRUE, echo=FALSE, results='markup', include=TRUE, cache=FALSE, message=FALSE, warning=FALSE, error=TRUE, fig.cap=NULL, out.width='100%'}
+text <- "
+数据格式   | 格式介绍             | 备注
+[fastq](https://blog.csdn.net/ltbylc/article/details/24346231)  | 下机数据存储格式     | 下机原始数据，多以fastq/fq或压缩格式为后缀
+[fasta](https://blog.csdn.net/ltbylc/article/details/24346231)  | 核苷酸序列或氨基酸序列格式  | 序列存储格式，多以fasta/fna/fa为后缀
+[NCBI SRA数据库](https://blog.csdn.net/u012150360/article/details/70556186) | NCBI 存储reads格式| wget下载后使用fastq-dump解压成fastq格式
+[blast m8](https://shengxin.ren/article/46) | blast比对输出格式 | blast+对应的参数是-outfmt 6
+[gff](https://www.cnblogs.com/djx571/p/9497707.html)  |  基因组注释信息格式 | gff/gtf是贮存注释信息的文件格式  
+[sam](https://blog.csdn.net/u012150360/article/details/70556186)  | 比对结果格式 |  bwa / bowtie输出格式
+[vcf](https://blog.csdn.net/u012150360/article/details/70556186) | 突变信息的文本格式 | 使用bcftools软件处理
+"
+
+df <- read.delim(text = text, stringsAsFactors = FALSE,
+                 header = TRUE, sep = "|",
+                 check.names = FALSE)
+knitr::kable(df, booktabs = TRUE, longtable = FALSE, escape = TRUE, align = 'c', linesep = '\\addlinespace', booktabs = TRUE) %>%
+    kable_styling(full_width = T, latex_options = c("hold_position")) %>% add_header_above(c("常用生信数据格式集合" = 3), bold = T)
+
+```
+
 
 
 About
@@ -455,7 +584,6 @@ Column
 <br>
 
 * 生信入门三年，学点儿皮毛，整理不完善之处请谅解；
-* 所谓生信培训班太基础，收费还贵（PS：看不下去~）；
 * 简单整理这几年入门趟的坑儿，希望能够入门效率高些；
 * 整理基础知识，也是对自己知识的沉淀，得空余时间整理，速度偏慢；
 * ...
