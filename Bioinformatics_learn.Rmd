@@ -505,7 +505,7 @@ Inputs {.sidebar}
 Column {.tabset} 
 -------------------------------------
 
-### 生信常用软件
+### 1.生信常用软件
 ```{r eval=TRUE, echo=FALSE, results='markup', include=TRUE, cache=FALSE, message=FALSE, warning=FALSE, error=TRUE, fig.cap=NULL, out.width='100%'}
 text <- "
 类别  | 软件  | 软件说明 | 备注
@@ -537,7 +537,7 @@ knitr::kable(df, booktabs = TRUE, longtable = FALSE, escape = TRUE, align = 'c',
 
 ```
 
-### 生信常用数据格式
+### 2.生信常用数据格式
 ```{r eval=TRUE, echo=FALSE, results='markup', include=TRUE, cache=FALSE, message=FALSE, warning=FALSE, error=TRUE, fig.cap=NULL, out.width='100%'}
 text <- "
 数据格式   | 格式介绍             | 备注
@@ -558,7 +558,75 @@ knitr::kable(df, booktabs = TRUE, longtable = FALSE, escape = TRUE, align = 'c',
 
 ```
 
+### 3.NCBI资源利用
 
+#### 3.1 NCBI SRA数据下载
+```{r, eval = F, echo = T}
+# dwonload from https://www.ncbi.nlm.nih.gov/sra/ERX3495280[accn]
+wget -c ftp://ftp.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/ERR/ERR347/ERR3473638/ERR3473638.sra
+
+# fastq-dump解压 
+fastq-dump --split-3 ERR3473638.sra --gzip
+# 解压为 ERR3473638_1.fastq.gz ERR3473638_2.fastq.gz 两个fastq文件
+
+# 抽提10000 reads作为测试集
+seqtk sample -s100 ERR3473638_1.fastq.gz 10000 > test_1.fastq
+seqtk sample -s100 ERR3473638_2.fastq.gz 10000 > test_2.fastq
+```
+<br>
+
+#### 3.2 去人源宿主reads
+```{r, eval = F, echo = T}
+# 去人源宿主reads
+## 下载human genome
+mkdir human_db
+cd human_db
+wget -c ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.28_GRCh38.p13/GCA_000001405.28_GRCh38.p13_genomic.fna.gz
+gunzip GCA_000001405.28_GRCh38.p13_genomic.fna.gz 
+ln -s GCA_000001405.28_GRCh38.p13_genomic.fna human.fna
+
+## 构建bwa index (人基因组为3G，构建index较慢，约半小时)
+bwa index human.fna
+
+## bwa mem比对
+bwa mem -t 8 -o map_human.sam human_db/human.fna test_1.fastq test_2.fastq 
+
+## samtools处理，即可得到去除人源reads的bam文件
+samtools view -Sb -f 4 -o unmap_human.bam map_human.sam 
+
+## 提取fastq
+## bam2fastq安装参考 https://github.com/jts/bam2fastq
+bam2fastq --unaligned unmap_human.bam -o test_rmhuman#.fastq 
+## test_rmhuman#.fastq 中的#代表输出的是双端测序fastq数据
+
+```
+<br>
+
+#### 3.3 大肠杆菌基因组覆盖统计
+```{r, eval = F, echo = T}
+# 下载大肠杆菌genome
+mkdir Escherichia_coli
+cd Escherichia_coli
+wget -c ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA//000/597/845/GCA_000597845.1_ASM59784v1/GCA_000597845.1_ASM59784v1_genomic.fna.gz 
+gunzip GCA_000597845.1_ASM59784v1_genomic.fna.gz 
+ln -s GCA_000597845.1_ASM59784v1_genomic.fna Escherichia_coli.fna
+
+## 构建bwa index
+bwa mem -t 8 -o map_ecoli.sam  Escherichia_coli/Escherichia_coli.fna test_rmhuman_1.fastq test_rmhuman_2.fastq 
+
+samtools view -Sb -o map_ecoli.bam map_ecoli.sam
+samtools sort -o map_ecoli_sorted.bam map_ecoli.bam
+samtools flagstat map_ecoli_sorted.bam > map_ecoli.txt
+samtools depth map_ecoli_sorted.bam > map_ecoli_depth.txt
+perl scripts/bwa.evaluation.pl Escherichia_coli/Escherichia_coli.fna map_ecoli.txt map_ecoli_depth.txt map_ecoli_coverage.txt
+
+## 结果
+cat map_ecoli_coverage.txt
+# Ref_genome      Sample  Reads_mapped    Depth_avg(X)    Coverage(%)     Coverage_4X(%)  Coverage_10X(%) Coverage_20X(%)
+# Escherichia_coli        map_ecoli       0.22%   0.00    0.03    0.00    0.00    0.00
+
+## 其他物种基因组覆盖情况同理
+```
 
 About
 ====================================
