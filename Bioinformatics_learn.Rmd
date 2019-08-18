@@ -612,6 +612,9 @@ gunzip GCA_000597845.1_ASM59784v1_genomic.fna.gz
 ln -s GCA_000597845.1_ASM59784v1_genomic.fna Escherichia_coli.fna
 
 ## 构建bwa index
+bwa index Escherichia_coli.fna
+
+## bwa 比对 及结果处理
 bwa mem -t 8 -o map_ecoli.sam  Escherichia_coli/Escherichia_coli.fna test_rmhuman_1.fastq test_rmhuman_2.fastq 
 
 samtools view -Sb -o map_ecoli.bam map_ecoli.sam
